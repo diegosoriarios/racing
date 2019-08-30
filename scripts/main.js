@@ -2,12 +2,8 @@ var UNITWIDTH = 90
 var UNITHEIGHT = 45
 var CATCHOFFSET = 120
 var PLAYERSPEED = 800.0
-var DINOSCALE = 20
-var DINOSPEED = 400.0
 var EGGSCALE = 3
 var PLAYERCOLLISIONDISTANCE = 38
-var DINOCOLLISIONDISTANCE = 55
-var DINOMODEL = 'https://raw.githubusercontent.com/microsoft/Windows-appsample-get-started-js3d/master/GetStartedJS3D/models/dino.json'
 var EGGMODEL = 'https://raw.githubusercontent.com/diegosoriarios/FPSurvivor/master/models/egg.json'
 
 var camera
@@ -25,15 +21,11 @@ var clock
 var totalCubesWide
 var collidableObjects = []
 var mapSize
-var dinoVelocity = new THREE.Vector3()
-var dino
 var egg, eggs = []
 let score = 0
 var loader = new THREE.JSONLoader()
 var instructions = document.getElementById('instructions')
 var blocker = document.getElementById("blocker")
-var dinoAlert = document.getElementById('dino-alert')
-dinoAlert.style.display = 'none'
 
 getPointerLock()
 init()
@@ -44,7 +36,6 @@ function init() {
 
     scene = new THREE.Scene()
     scene.fog = new THREE.FogExp2(0xcccccc, 0.0015)
-    //scene.fog = new THREE.FogExp2(0x000000, 0.0100)
 
 
     renderer = new THREE.WebGLRenderer()
@@ -68,26 +59,6 @@ function init() {
     createGround()
     createPerimWalls()
 
-    loader.load(DINOMODEL, function(geometry, materials) {
-        var dinoObject = new THREE.Mesh(geometry, new THREE.MultiMaterial(materials))
-
-        dinoObject.scale.set(DINOSCALE, DINOSCALE, DINOSCALE)
-        dinoObject.rotation.y = degreesToRadians(-90)
-        dinoObject.position.set(30, 0, -400)
-        dinoObject.name = "dino"
-        scene.add(dinoObject)
-
-        dino = scene.getObjectByName("dino")
-
-        instructions.innerHTML = "<strong>Click to Play!</strong> </br></br> W,A,S,D or arrow keys = move </br>Mouse = look around"
-
-        animate()
-    })
-
-
-    /**
-     * Hand
-     */
     var textureLoader = new THREE.TextureLoader()
     var map = textureLoader.load('models/car/texture.jpg');
     var handMaterial = new THREE.MeshPhongMaterial({map: map});
@@ -104,14 +75,12 @@ function init() {
             })
             object.name = "car"
 
-            //object.scale.x = .8
-            //object.scale.y = .7
-            //object.scale.z = .8
-            //object.rotation.z = 1.5
             object.rotation.y = degreesToRadians(-90)
-            //object.rotation.x = 2
+
             camera.add(object);
             object.position.set(0, -5, -15);
+            
+            animate()
         }, xhr => {
             console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' )
         }, error => {
@@ -121,7 +90,6 @@ function init() {
 
     addLights()
     
-    ////////////////////////postprocessing()
 
     window.addEventListener('resize', onWindowResize, false)
 }
@@ -154,27 +122,6 @@ function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min)) + min
 }
 
-/*
-function triggerChase() {
-    if(dino.position.distanceTo(controls.getObject().position) < 300) {
-        var lookTarget = new THREE.Vector3()
-        lookTarget.copy(controls.getObject().position)
-        lookTarget.y = dino.position.y
-
-        dino.lookAt(lookTarget)
-
-        var distanceFrom = Math.round(dino.position.distanceTo(controls.getObject().position)) - CATCHOFFSET
-        dinoAlert.innerHTML = "Dino has spotted you! Distance from you: " + distanceFrom
-        dinoAlert.style.display = ''
-
-        return true
-    } else {
-        dinoAlert.style.display = 'none'
-        return false
-    }
-}
-*/
-
 function caught() {
     blocker.style.display = ''
     instructions.innerHTML = "GAME OVER </br></br></br> Press ESC to restart"
@@ -189,63 +136,32 @@ function animate() {
     
     var delta = clock.getDelta()
     
-    //var isBeingChased = triggerChase()
-
-    //if(dino.position.distanceTo(controls.getObject().position) < CATCHOFFSET) {
-    //    caught()
-    //} else {
-        //animateDino(delta)
-        animatePlayer(delta)
-    //}
-}
-
-function animateDino(delta) {
-    dinoVelocity.x -= dinoVelocity.x * 10.0 * delta
-    dinoVelocity.z -= dinoVelocity.z * 10.0 * delta
-
-    if(detectDinoCollision() == false) {
-        dinoVelocity.z += DINOSPEED * delta
-        dino.translateZ(dinoVelocity.z * delta)
-    } else {
-        var directionMultiples = [-1, 1, 2]
-        var randomIndex = getRandomInt(0, 2)
-        var randomDirection = degreesToRadians(90 * directionMultiples[randomIndex])
-
-        dinoVelocity.z += DINOSPEED * delta
-        dino.rotation.y += randomDirection
-    }
+    animatePlayer(delta)
 }
 
 function animatePlayer(delta) {
-    //playerVelocity.x -= playerVelocity.x * 10.0 * delta
-    //playerVelocity.z -= playerVelocity.z * 10.0 * delta
 
     const direction = new THREE.Vector3;
     let speed = 2.0
 
     if(detectPlayerCollision() == false) {
         if (moveForward) {
-            //playerVelocity.z -= PLAYERSPEED * delta
-
             camera.getWorldDirection(direction);
 
             camera.position.addScaledVector(direction, speed);
         } 
         if (moveBackward) {
-            //playerVelocity.z += PLAYERSPEED * delta
-
+            
             camera.getWorldDirection(direction);
 
             camera.position.addScaledVector(direction, -speed);
         } 
         if (moveLeft) {
-            //playerVelocity.x -= PLAYERSPEED * delta
             camera.rotation.y += degreesToRadians(1)
             camera.children[0].rotation.y += degreesToRadians(1)
         }
         
         if (moveRight) {
-            //playerVelocity.x += PLAYERSPEED * delta
             camera.rotation.y -= degreesToRadians(1)
             camera.children[0].rotation.y -= degreesToRadians(1)
         }
@@ -260,7 +176,6 @@ function animatePlayer(delta) {
     } else {
         playerVelocity.x = 0
         playerVelocity.z = 0
-        //camera.children[0].rotation.y = degreesToRadians(-90)
     }
 }
 
@@ -306,22 +221,6 @@ function detectPlayerCollision() {
     }
 }
 
-function detectDinoCollision() {
-    var matrix = new THREE.Matrix4()
-    matrix.extractRotation(dino.matrix)
-
-    var directionFront = new THREE.Vector3(0, 0, 1)
-
-    directionFront.applyMatrix4(matrix)
-
-    var rayCasterF = new THREE.Raycaster(dino.position, directionFront)
-    if(rayIntersect(rayCasterF, DINOCOLLISIONDISTANCE)) {
-        return true
-    } else {
-        return false
-    }
-}
-
 function detectEggCollision() {
         eggs.forEach(egg => {
             if(Math.floor(controls.getObject().position.x) > (egg.position.x - 10) &&
@@ -343,13 +242,6 @@ function detectEggCollision() {
     
             }
         })
-    
-    /*if(Math.floor(controls.getObject().position.x) == egg.position.x) {
-        console.log('aqui')
-        if(Math.floor(controls.getObject().position.z) == egg.position.z) {
-            alert('get')   
-        }
-    }*/
 }
 
 function rayIntersect(ray, distance) {
@@ -375,29 +267,28 @@ function lockChange() {
     }
 }
 
-/*------LABIRINTO---------*/
 
 function createMazeCubes() {
     var map = [
         [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ],
         [1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ],
         [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ],
-        [1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, ],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, ],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 9, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, ],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ],
+        [1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ],
+        [1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ],
+        [1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ],
+        [1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ],
+        [1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ],
+        [1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, ],
+        [1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, ],
+        [1, 0, 1, 1, 1, 1, 1, 1, 1, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, ],
+        [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, ],
+        [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, ],
+        [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, ],
+        [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, ],
+        [1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, ],
+        [1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, ],
+        [1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, ],
+        [1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, ],
         [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ],
     ]
 
